@@ -1,0 +1,5 @@
+author: "Monir Zaman"
+category: "service"
+summary: "Get and Set location query for user by coordinates"
+home: "https://github.com/monirz/mod_loc_query.git"
+url: "https://github.com/monirz/mod_loc_query.git"
