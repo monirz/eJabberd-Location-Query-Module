@@ -17,10 +17,10 @@ do_decode(<<"query">>,
 	  <<"http://jabber.org/protocol/test">>, El, Opts) ->
     decode_lquery(<<"http://jabber.org/protocol/test">>,
 		  Opts, El);
-do_decode(<<"users">>,
+do_decode(<<"user">>,
 	  <<"http://jabber.org/protocol/test">>, El, Opts) ->
-    decode_users(<<"http://jabber.org/protocol/test">>,
-		 Opts, El);
+    decode_user(<<"http://jabber.org/protocol/test">>, Opts,
+		El);
 do_decode(<<"location">>,
 	  <<"http://jabber.org/protocol/test">>, El, Opts) ->
     decode_location(<<"http://jabber.org/protocol/test">>,
@@ -34,7 +34,7 @@ tags() ->
     [{<<"lon">>, <<"http://jabber.org/protocol/test">>},
      {<<"lat">>, <<"http://jabber.org/protocol/test">>},
      {<<"query">>, <<"http://jabber.org/protocol/test">>},
-     {<<"users">>, <<"http://jabber.org/protocol/test">>},
+     {<<"user">>, <<"http://jabber.org/protocol/test">>},
      {<<"location">>,
       <<"http://jabber.org/protocol/test">>}].
 
@@ -198,62 +198,55 @@ encode_lquery({lquery, Lat, Lon}, __TopXMLNS) ->
 'encode_lquery_$lon'(Lon, __TopXMLNS, _acc) ->
     [encode_lon(Lon, __TopXMLNS) | _acc].
 
-decode_users(__TopXMLNS, __Opts,
-	     {xmlel, <<"users">>, _attrs, _els}) ->
-    Cdata = decode_users_els(__TopXMLNS, __Opts, _els,
-			     <<>>),
+decode_user(__TopXMLNS, __Opts,
+	    {xmlel, <<"user">>, _attrs, _els}) ->
+    Cdata = decode_user_els(__TopXMLNS, __Opts, _els, <<>>),
     Cdata.
 
-decode_users_els(__TopXMLNS, __Opts, [], Cdata) ->
-    decode_users_cdata(__TopXMLNS, Cdata);
-decode_users_els(__TopXMLNS, __Opts,
-		 [{xmlcdata, _data} | _els], Cdata) ->
-    decode_users_els(__TopXMLNS, __Opts, _els,
-		     <<Cdata/binary, _data/binary>>);
-decode_users_els(__TopXMLNS, __Opts, [_ | _els],
-		 Cdata) ->
-    decode_users_els(__TopXMLNS, __Opts, _els, Cdata).
+decode_user_els(__TopXMLNS, __Opts, [], Cdata) ->
+    decode_user_cdata(__TopXMLNS, Cdata);
+decode_user_els(__TopXMLNS, __Opts,
+		[{xmlcdata, _data} | _els], Cdata) ->
+    decode_user_els(__TopXMLNS, __Opts, _els,
+		    <<Cdata/binary, _data/binary>>);
+decode_user_els(__TopXMLNS, __Opts, [_ | _els],
+		Cdata) ->
+    decode_user_els(__TopXMLNS, __Opts, _els, Cdata).
 
-encode_users(Cdata, __TopXMLNS) ->
+encode_user(Cdata, __TopXMLNS) ->
     __NewTopXMLNS =
 	xmpp_codec:choose_top_xmlns(<<"http://jabber.org/protocol/test">>,
 				    [], __TopXMLNS),
-    _els = encode_users_cdata(Cdata, []),
+    _els = encode_user_cdata(Cdata, []),
     _attrs = xmpp_codec:enc_xmlns_attrs(__NewTopXMLNS,
 					__TopXMLNS),
-    {xmlel, <<"users">>, _attrs, _els}.
+    {xmlel, <<"user">>, _attrs, _els}.
 
-decode_users_cdata(__TopXMLNS, <<>>) -> <<>>;
-decode_users_cdata(__TopXMLNS, _val) -> _val.
+decode_user_cdata(__TopXMLNS, <<>>) -> <<>>;
+decode_user_cdata(__TopXMLNS, _val) -> _val.
 
-encode_users_cdata(<<>>, _acc) -> _acc;
-encode_users_cdata(_val, _acc) ->
+encode_user_cdata(<<>>, _acc) -> _acc;
+encode_user_cdata(_val, _acc) ->
     [{xmlcdata, _val} | _acc].
 
 decode_location(__TopXMLNS, __Opts,
 		{xmlel, <<"location">>, _attrs, _els}) ->
     Users = decode_location_els(__TopXMLNS, __Opts, _els,
-				error),
+				[]),
     {location, Users}.
 
 decode_location_els(__TopXMLNS, __Opts, [], Users) ->
-    case Users of
-      error ->
-	  erlang:error({xmpp_codec,
-			{missing_tag, <<"users">>, __TopXMLNS}});
-      {value, Users1} -> Users1
-    end;
+    lists:reverse(Users);
 decode_location_els(__TopXMLNS, __Opts,
-		    [{xmlel, <<"users">>, _attrs, _} = _el | _els],
-		    Users) ->
+		    [{xmlel, <<"user">>, _attrs, _} = _el | _els], Users) ->
     case xmpp_codec:get_attr(<<"xmlns">>, _attrs,
 			     __TopXMLNS)
 	of
       <<"http://jabber.org/protocol/test">> ->
 	  decode_location_els(__TopXMLNS, __Opts, _els,
-			      {value,
-			       decode_users(<<"http://jabber.org/protocol/test">>,
-					    __Opts, _el)});
+			      [decode_user(<<"http://jabber.org/protocol/test">>,
+					   __Opts, _el)
+			       | Users]);
       _ ->
 	  decode_location_els(__TopXMLNS, __Opts, _els, Users)
     end;
@@ -271,5 +264,8 @@ encode_location({location, Users}, __TopXMLNS) ->
 					__TopXMLNS),
     {xmlel, <<"location">>, _attrs, _els}.
 
-'encode_location_$users'(Users, __TopXMLNS, _acc) ->
-    [encode_users(Users, __TopXMLNS) | _acc].
+'encode_location_$users'([], __TopXMLNS, _acc) -> _acc;
+'encode_location_$users'([Users | _els], __TopXMLNS,
+			 _acc) ->
+    'encode_location_$users'(_els, __TopXMLNS,
+			     [encode_user(Users, __TopXMLNS) | _acc]).

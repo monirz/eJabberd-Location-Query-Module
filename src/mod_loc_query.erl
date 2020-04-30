@@ -4,15 +4,8 @@
 
 -include("logger.hrl").
 
-% -include("xmpp_codec.hrl").
 -include("xmpp.hrl").
-
 -include("mod_last.hrl").
-
--include("ejabberd_sql_pt.hrl").
-
--include_lib("stdlib/include/ms_transform.hrl").
-
 -define(NS_TEST, "http://jabber.org/protocol/test").
 
 -record(lquery,
@@ -21,12 +14,9 @@
 
 -type lquery() :: #lquery{}.
 
--record(location, {
-    users  :: undefined | [binary()]}).
-
+-record(location, {users = [] :: [binary()]}).
 -type location() :: #location{}.
 
-% location{users = [<<"mnr1">>, <<"mnr2">>]}
 
 -export([depends/2, mod_options/1, process_iq/1,
 	 start/2, stop/1]).
@@ -66,11 +56,12 @@ process_iq(#iq{type = get, to = To, sub_els = [#lquery{lat = Lat, lon = Lon}]} =
             {ok, Columns, Results},
             Users = [X || [X|_] <- Results],
 
-            Location = #location{users = [Users]},   
-            xmpp:make_iq_result(IQ, Location);  
+            ?INFO_MSG("IQ users ---- ~p\n", [Users]),
+
+            xmpp:make_iq_result(IQ, #location{users = Users}); 
         
         _Err ->
-            {error, db_failure}
+            {error, db_failure} 
     end;
     
 %% Process IQ for set 
@@ -78,15 +69,20 @@ process_iq(#iq{type = set, to = To, from = From, sub_els = [#lquery{lat = Lat, l
     ?INFO_MSG("IQ Set ~p Lat ~p Lon ~p\n", [IQ, Lat, Lon]),
     
     % X = binary_to_float(Lat),
+    % binary to float enc/dec is handled by the xmpp code genrated for XML spec. 
     Server = To#jid.lserver,
     User = From#jid.luser,
     ?INFO_MSG("IQ Set --> Server ~p User ~p\n",[Server, User]),
     Query = io_lib:format("INSERT INTO locations(user_id, lat, "
 		      "lon) VALUES ('~s', ~f,~f) ON DUPLICATE "
 		      "KEY UPDATE lat=VALUES(lat), lon=VALUES(lon)",
-		      [User, Lat, Lon]),
+              [User, Lat, Lon]),
+           
     case ejabberd_sql:sql_query(Server, [Query]) of
-      {updated, _} -> ok;
-      Err -> Err
-    end,
-    xmpp:make_iq_result(IQ). 
+        {updated, _} -> ok,
+        xmpp:make_iq_result(IQ); 
+  
+        Err -> 
+          Err
+
+    end.
