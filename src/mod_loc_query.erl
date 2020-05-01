@@ -1,4 +1,5 @@
 -module(mod_loc_query).
+-author("Monir Zaman").
 
 -behaviour(gen_mod).
 
@@ -44,7 +45,7 @@ process_iq(#iq{type = get, to = To, sub_els = [#lquery{lat = Lat, lon = Lon}]} =
           [IQ, Lat, Lon]),
           Server = To#jid.lserver,
         Query =
-        io_lib:format(" SELECT user_id, lat, lon, ( 3959 * acos(cos(radians(~f)) * cos(radians(lat)) * cos(radians(lon) - radians(~f)) + sin(radians(~f)) *  sin(radians(lat )))) AS distance FROM locations  HAVING distance < 25 ORDER BY distance;",
+        io_lib:format(" SELECT user_id, lat, lon, ( 3959 * acos(cos(radians(~f)) * cos(radians(lat)) * cos(radians(lon) - radians(~f)) + sin(radians(~f)) *  sin(radians(lat )))) AS distance FROM locations  HAVING distance < 0.5 ORDER BY distance;",
          [Lat, Lon, Lat]),
 
     ?INFO_MSG("Query string > ~p\n", [Query]),      
