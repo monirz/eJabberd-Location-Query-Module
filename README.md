@@ -10,6 +10,32 @@ To install the module put those two file in installation src directory and regis
 
 Then you should be good to go!  
 
+IQ stanza for get query:
+
+```xml
+<iq xmlns="jabber:client"  id="bfffbfab-e9a5-426c-8f89-ac1858dcc9f7" from="mnr@localhost/gajim.IHS9P4JW" to="localhost" type="set">
+
+  <query xmlns='http://jabber.org/protocol/test'>
+        <lat>-33.44</lat>
+         <lon>151.1462242</lon>
+  </query>
+
+</iq>
+
+```
+
+```xml
+
+<iq xmlns="jabber:client"  id="bfffbfab-e9a5-426c-8f89-ac1858dcc9f7" from="mnr@localhost/gajim.IHS9P4JW" to="localhost" type="get">
+
+  <query xmlns='http://jabber.org/protocol/test'>
+        <lat>-33.00</lat>
+         <lon>151.1462242</lon>
+  </query>
+
+</iq>
+```
+
 
 
 
